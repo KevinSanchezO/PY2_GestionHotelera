@@ -3,7 +3,6 @@ import Control.DeepSeq
 import Control.Exception
 
 
-
 {-----Menu de inicio----
 Menu el cual se mostrara primero al iniciar el programa-}
 menuPrincipal::IO()
@@ -28,7 +27,7 @@ menuAdministrativo=
         case s of
             "1" ->infoHoteles
             "2"->cargarTipoHabitacion
-            --"3"->asignarCantidadHabitacionesTipo
+            "3"->asignarCantidadHabitacionesPorTipo
             "4"->cargarTarifas
             {-"5"->consultarReservacion
             "6"->consultaFacturas
@@ -188,13 +187,88 @@ intToString numero = do
         let valor = show numero
         return valor
 
+{------------------------------------------------CANTIDAD HABITACIONES POR TIPO---------------------------------------------}
+
+
+asignarCantidadHabitacionesPorTipo:: IO()
+asignarCantidadHabitacionesPorTipo = do
+    listaHabitacion <- leerArchivo"habitacionesCargadas.txt"
+    let listaHab = crearListaHabitacionesAux listaHabitacion []
+    resetearArchivo "cantidadPorTiposHabitaciones.txt" ""
+    resetearArchivo "codigosTiposHabitaciones.txt" ""
+    asignarCantidadesDeHabiatciones "cantidadPorTiposHabitaciones.txt" listaHab
+
+
+asignarCantidadesDeHabiatciones:: System.IO.FilePath->[String]->IO()
+asignarCantidadesDeHabiatciones archivo [] = mostrarCantidades
+asignarCantidadesDeHabiatciones archivo listahab = do
+    let nombre = head listahab
+    let tl = tail listahab
+    let mensaje = "\tDigite cuantas habitaciones tendra el hotel de este tipo ->" ++ nombre ++ " : "
+    putStrLn mensaje
+    cantidad <- getLine
+    appendFile archivo (nombre ++ "\n")
+    appendFile archivo (cantidad ++ "\n")
+    cantidad2 <- stringToInt(cantidad)
+    agregarToHabitaciones archivo nombre cantidad2 0 tl "codigosTiposHabitaciones.txt"
+
+
+agregarToHabitaciones:: System.IO.FilePath->String->Integer->Integer->[String]->System.IO.FilePath->IO()
+agregarToHabitaciones archivo nombre cantidad contador lista archivoCodigos =do 
+    let contador2 = contador + 1
+    pContador2 <- intToString contador
+    let catidadDefinitiva = nombre++pContador2++"\n"
+    if contador < cantidad then
+        escribirEnCantidadPorTipo archivo nombre cantidad contador2 lista catidadDefinitiva archivoCodigos
+    else
+        asignarCantidadesDeHabiatciones archivo lista
+
+
+escribirEnCantidadPorTipo::System.IO.FilePath->String->Integer->Integer->[String]->String->System.IO.FilePath->IO()
+escribirEnCantidadPorTipo archivo nombre cant cont2 lista catidadDefinitiva archivo2=do 
+    appendFile archivo2 catidadDefinitiva 
+    agregarToHabitaciones archivo nombre cant cont2 lista archivo2
+    
+
+
+mostrarCantidades::IO()
+mostrarCantidades = do
+    listaCodigosTipoHabitacion <- leerArchivo "codigosTiposHabitaciones.txt"
+    listaCantidadTiposHabitacion<- leerArchivo "cantidadPorTiposHabitaciones.txt"
+    mostrarCantidadesAux listaCantidadTiposHabitacion listaCodigosTipoHabitacion
+
+
+mostrarCantidadesAux::[String]->[String]->IO()
+mostrarCantidadesAux [] [] = menuAdministrativo
+mostrarCantidadesAux listaCodigosTipoHabitacion listaCantidadTiposHabitacion = do
+    let nombre = head listaCodigosTipoHabitacion
+    let tl2 = tail listaCodigosTipoHabitacion 
+    let tl3 = tail tl2
+    let cantidad = read(head tl2)::Int
+    let mensaje = "El tipo de habitacion "++nombre++" tiene las siguientes habitaciones, se muestran sus identificadores: \n"
+    putStrLn mensaje
+    mostrarSig tl3 cantidad 0 listaCantidadTiposHabitacion
+
+
+
+mostrarSig::[String]->Int->Int->[String]->IO()
+mostrarSig lista cant cont listaCantidadTiposHabitacion = do
+    let hd = head listaCantidadTiposHabitacion
+    let tl = tail listaCantidadTiposHabitacion
+    let cont2 = cont+1
+    putStrLn (hd++"\n")
+    if cont == cant-1 then 
+        mostrarCantidadesAux lista tl
+    else
+        mostrarSig lista cant cont2 tl
+
 {-----------------------------------------------------------CARGAR TARIFAS---------------------------------------------------------------}
 
 cargarTarifas::IO()
 cargarTarifas = do
     resetearArchivo "Tarifas.txt" ""
     list <- leerArchivo "habitacionesCargadas.txt"
-    let listaDeHabitaciones = listaHabitacionesAux list []
+    let listaDeHabitaciones = crearListaHabitacionesAux list []
     cargarTarifasAux listaDeHabitaciones
        
 cargarTarifasAux ::[String]->IO()
@@ -208,12 +282,13 @@ cargarTarifasAux lista = do
     appendFile "Tarifas.txt" (tipo ++ "\n" ++ precio ++ "\n")
     cargarTarifasAux tlLista     
 
-listaHabitacionesAux:: [String]->[String]->[String]
-listaHabitacionesAux [] listaDeHabitaciones = listaDeHabitaciones
-listaHabitacionesAux lista listaDeHabitaciones = do
+crearListaHabitacionesAux:: [String]->[String]->[String]
+crearListaHabitacionesAux [] listaDeHabitaciones = listaDeHabitaciones
+crearListaHabitacionesAux lista listaDeHabitaciones = do
     let primerElemento = head lista
     let tl = tail lista
     let tl1 = tail tl
     let listaSigHabitacion = tail tl1
     let listaDeHabitaciones2 = listaDeHabitaciones++[primerElemento] 
-    listaHabitacionesAux listaSigHabitacion listaDeHabitaciones2
+    crearListaHabitacionesAux listaSigHabitacion listaDeHabitaciones2
+
