@@ -28,9 +28,9 @@ menuAdministrativo=
         case s of
             "1" ->infoHoteles
             "2"->cargarTipoHabitacion
-            {-"3"->asignarCantidadHabitacionesTipo
+            --"3"->asignarCantidadHabitacionesTipo
             "4"->cargarTarifas
-            "5"->consultarReservacion
+            {-"5"->consultarReservacion
             "6"->consultaFacturas
             "7"->estadisticasOcupacion-}
             "0"->menuPrincipal
@@ -116,11 +116,12 @@ cargarTipoHabitacion =
 Permite cargar en una lista los datos de un archivo cuyos datos esten separados por
 saltos de linea haciendo cada salto de linea un dato dentro de la lista-}
 leerArchivo :: System.IO.FilePath -> IO [String]
-leerArchivo (archivo) = do
-    contents <- readFile archivo
-    evaluate (force contents)
-    let lineas = lines contents
-    return lineas;
+leerArchivo (archivo) = 
+    do
+        contents <- readFile archivo
+        evaluate (force contents)
+        let lineas = lines contents
+        return lineas;
 
 {----listaNoRepetidos----
 verifica que en el archivo donde persisten los datos de las habitaciones
@@ -128,19 +129,20 @@ no existan nombre de habitaciones repetidos
 -}
 listaNoRepetidos :: [String] -> [String] -> Int ->[String]
 listaNoRepetidos [] res opc = res
-listaNoRepetidos list res opc = do
-    let listaCortada = tail list
-    let listaCortada1 = tail listaCortada
-    let listaCortada2 = tail listaCortada1
-    let listaCortada3 = tail listaCortada2
-    let hd = head list
-    let res2 = res ++ [hd]
-    let opc1 = opc+1
-    let opc2 = opc+3
-    (if ((mod opc  3) == 0) && estaLista hd res then
-         listaNoRepetidos listaCortada2 res opc2
-    else
-        listaNoRepetidos listaCortada res2 opc1)
+listaNoRepetidos list res opc = 
+    do
+        let listaCortada = tail list
+        let listaCortada1 = tail listaCortada
+        let listaCortada2 = tail listaCortada1
+        let listaCortada3 = tail listaCortada2
+        let hd = head list
+        let res2 = res ++ [hd]
+        let opc1 = opc+1
+        let opc2 = opc+3
+        (if ((mod opc  3) == 0) && estaLista hd res then
+             listaNoRepetidos listaCortada2 res opc2
+        else
+            listaNoRepetidos listaCortada res2 opc1)
 
 {----resetearArchivo----
 Permite dejar en blanco un archivo de texto para volver a escribir su informacion
@@ -186,4 +188,32 @@ intToString numero = do
         let valor = show numero
         return valor
 
+{-----------------------------------------------------------CARGAR TARIFAS---------------------------------------------------------------}
 
+cargarTarifas::IO()
+cargarTarifas = do
+    resetearArchivo "Tarifas.txt" ""
+    list <- leerArchivo "habitacionesCargadas.txt"
+    let listaDeHabitaciones = listaHabitacionesAux list []
+    cargarTarifasAux listaDeHabitaciones
+       
+cargarTarifasAux ::[String]->IO()
+cargarTarifasAux [] = menuAdministrativo 
+cargarTarifasAux lista = do
+    let tipo = head lista
+    let tlLista = tail lista
+    let interaccion = ("\nIngrese un precio para la habitacion de tipo " ++ tipo ++ " : ")
+    putStrLn interaccion
+    precio <- getLine
+    appendFile "Tarifas.txt" (tipo ++ "\n" ++ precio ++ "\n")
+    cargarTarifasAux tlLista     
+
+listaHabitacionesAux:: [String]->[String]->[String]
+listaHabitacionesAux [] listaDeHabitaciones = listaDeHabitaciones
+listaHabitacionesAux lista listaDeHabitaciones = do
+    let primerElemento = head lista
+    let tl = tail lista
+    let tl1 = tail tl
+    let listaSigHabitacion = tail tl1
+    let listaDeHabitaciones2 = listaDeHabitaciones++[primerElemento] 
+    listaHabitacionesAux listaSigHabitacion listaDeHabitaciones2
