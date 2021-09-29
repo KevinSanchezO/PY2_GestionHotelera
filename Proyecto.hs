@@ -1,6 +1,6 @@
 import System.IO
-import Control.DeepSeq
-import Control.Exception
+import Control.DeepSeq ( force )
+import Control.Exception ( evaluate )
 
 
 {-----Menu de inicio----
@@ -67,7 +67,7 @@ Muestra los datos del hotel administrativo leyendo el archivo que almacena los d
 infoHoteles:: IO()
 infoHoteles=
     do
-        putStrLn "\nInformacion del hotel\nNombre\t\tCedula Juridica\t\tSitio Web\tTelefono\tPais\tProvincia"
+        putStrLn "\n_____________________INFORMACION DEL HOTEL_____________________"
         cs <- readFile "infoHoteles.txt"
         let datos = split ',' cs
         mostrarAux datos
@@ -78,11 +78,36 @@ mostrarAux::[String]->IO()
 mostrarAux [] = menuAdministrativo
 mostrarAux datosArchivo = 
     do
-        let cabeza = head datosArchivo
-        let resto = tail datosArchivo
-        let stringMensaje = cabeza++"\t"
-        putStr stringMensaje
-        mostrarAux resto
+        let nombre = head datosArchivo
+        let mensajeNombre = "Nombre: "++nombre
+        let resto1 = tail datosArchivo
+
+        let cedula = head resto1
+        let mensajeCedula = "Cedula Juridica: "++cedula 
+        let resto2 = tail resto1 
+
+        let sitioWeb = head resto2
+        let mensajeSitioWeb = "Sitio Web: "++sitioWeb
+        let resto3 = tail resto2
+
+        let telefono = head resto3
+        let mensajeTelefono = "Telefono: "++telefono
+        let resto4 = tail resto3
+
+        let pais = head resto4
+        let mensajePais = "Pais: "++pais
+        let resto5 = tail resto4
+
+        let provincia = head resto5
+        let mensajeProvincia = "Provincia: "++provincia
+
+        putStrLn mensajeNombre
+        putStrLn mensajeCedula
+        putStrLn mensajeSitioWeb
+        putStrLn mensajeTelefono
+        putStrLn mensajePais
+        putStrLn mensajeProvincia
+        menuAdministrativo
 
 {----split----
 Separa en listas un string con un valor determinado tipo char--}
@@ -147,20 +172,22 @@ listaNoRepetidos list res opc =
 Permite dejar en blanco un archivo de texto para volver a escribir su informacion
 modificada-}
 resetearArchivo :: System.IO.FilePath -> String -> IO ()
-resetearArchivo archivo info = do
-    writeFile archivo (info)
+resetearArchivo archivo info = 
+    do
+        writeFile archivo (info)
 
 {----estaLista----
 verifica si en una lista se encuentra un valor en especifico-}
 estaLista :: String->[String]->Bool
 estaLista nombre [] = False
-estaLista nombre lista = do
-    let primerElemento = head lista
-    let listaCortada = tail lista
-    if primerElemento == nombre then
-        True
-    else
-        estaLista nombre listaCortada
+estaLista nombre lista = 
+    do
+        let primerElemento = head lista
+        let listaCortada = tail lista
+        if primerElemento == nombre then
+            True
+        else
+            estaLista nombre listaCortada
 
 
 {----escribirEnHabitaciones----
@@ -168,127 +195,154 @@ se encarga de administrar la escritura de los datos de habitaciones sin que
 se repita datos de habitaciones en el archivo de la persistencia de datos-}
 escribirEnHabitaciones :: System.IO.FilePath->[String]->IO ()
 escribirEnHabitaciones archivo [] = menuAdministrativo
-escribirEnHabitaciones archivo lista = do
-    let dato = head lista
-    let tl_1 = tail lista
+escribirEnHabitaciones archivo lista = 
+    do
+        let dato = head lista
+        let tl_1 = tail lista
 
-    let guardarMensaje = dato  ++ "\n"
-    appendFile archivo guardarMensaje
-    escribirEnHabitaciones archivo tl_1
+        let guardarMensaje = dato  ++ "\n"
+        appendFile archivo guardarMensaje
+        escribirEnHabitaciones archivo tl_1
        
 {--------------------------------------------------------------------------------------------------------------------------}
 
-stringToInt texto = do
+stringToInt texto = 
+    do
         let valor = read texto::Integer
         return valor
         
 
-intToString numero = do
+intToString numero = 
+    do
         let valor = show numero
         return valor
 
 {------------------------------------------------CANTIDAD HABITACIONES POR TIPO---------------------------------------------}
 
-
+{----asignarCantidadHabitacionesPorTipo----
+Administra todos los archivos necesarios para poder hacer esta funcionalidad-}
 asignarCantidadHabitacionesPorTipo:: IO()
-asignarCantidadHabitacionesPorTipo = do
-    listaHabitacion <- leerArchivo"habitacionesCargadas.txt"
-    let listaHab = crearListaHabitacionesAux listaHabitacion []
-    resetearArchivo "cantidadPorTiposHabitaciones.txt" ""
-    resetearArchivo "codigosTiposHabitaciones.txt" ""
-    asignarCantidadesDeHabiatciones "cantidadPorTiposHabitaciones.txt" listaHab
+asignarCantidadHabitacionesPorTipo = 
+    do
+        listaHabitacion <- leerArchivo"habitacionesCargadas.txt"
+        let listaHab = crearListaHabitacionesAux listaHabitacion []
+        resetearArchivo "cantidadPorTiposHabitaciones.txt" ""
+        resetearArchivo "codigosTiposHabitaciones.txt" ""
+        asignarCantidadesDeHabiatciones "cantidadPorTiposHabitaciones.txt" listaHab
 
-
+{----asignarCantidadesDeHabiatciones----
+Le solicita al usuario la cantidad de habitaciones que se crearan por tipo almacenado-}
 asignarCantidadesDeHabiatciones:: System.IO.FilePath->[String]->IO()
 asignarCantidadesDeHabiatciones archivo [] = mostrarCantidades
-asignarCantidadesDeHabiatciones archivo listahab = do
-    let nombre = head listahab
-    let tl = tail listahab
-    let mensaje = "\tDigite cuantas habitaciones tendra el hotel de este tipo ->" ++ nombre ++ " : "
-    putStrLn mensaje
-    cantidad <- getLine
-    appendFile archivo (nombre ++ "\n")
-    appendFile archivo (cantidad ++ "\n")
-    cantidad2 <- stringToInt(cantidad)
-    agregarToHabitaciones archivo nombre cantidad2 0 tl "codigosTiposHabitaciones.txt"
+asignarCantidadesDeHabiatciones archivo listahab = 
+    do
+        let nombre = head listahab
+        let tl = tail listahab
+        let mensaje = "\tDigite cuantas habitaciones tendra el hotel de este tipo ->" ++ nombre ++ " : "
+        putStrLn mensaje
+        cantidad <- getLine
+        appendFile archivo (nombre ++ "\n")
+        appendFile archivo (cantidad ++ "\n")
+        cantidad2 <- stringToInt(cantidad)
+        agregarToHabitaciones archivo nombre cantidad2 0 tl "codigosTiposHabitaciones.txt"
 
-
+{-----agregarToHabitaciones----
+Genera el codigo unico de las habitaciones creadas-}
 agregarToHabitaciones:: System.IO.FilePath->String->Integer->Integer->[String]->System.IO.FilePath->IO()
-agregarToHabitaciones archivo nombre cantidad contador lista archivoCodigos =do 
-    let contador2 = contador + 1
-    pContador2 <- intToString contador
-    let catidadDefinitiva = nombre++pContador2++"\n"
-    if contador < cantidad then
-        escribirEnCantidadPorTipo archivo nombre cantidad contador2 lista catidadDefinitiva archivoCodigos
-    else
-        asignarCantidadesDeHabiatciones archivo lista
+agregarToHabitaciones archivo nombre cantidad contador lista archivoCodigos = 
+    do 
+        let contador2 = contador + 1
+        pContador2 <- intToString contador
+        let catidadDefinitiva = nombre++pContador2++"\n"
+        if contador < cantidad then
+            escribirEnCantidadPorTipo archivo nombre cantidad contador2 lista catidadDefinitiva archivoCodigos
+        else
+            asignarCantidadesDeHabiatciones archivo lista
 
-
+{-----escribirEnCantidadPorTipo-----
+Agrega al archivo de la persistencia de datos el codigo de una habitacion creada.-}
 escribirEnCantidadPorTipo::System.IO.FilePath->String->Integer->Integer->[String]->String->System.IO.FilePath->IO()
-escribirEnCantidadPorTipo archivo nombre cant cont2 lista catidadDefinitiva archivo2=do 
-    appendFile archivo2 catidadDefinitiva 
-    agregarToHabitaciones archivo nombre cant cont2 lista archivo2
+escribirEnCantidadPorTipo archivo nombre cant cont2 lista catidadDefinitiva archivo2=
+    do 
+        appendFile archivo2 catidadDefinitiva 
+        agregarToHabitaciones archivo nombre cant cont2 lista archivo2
     
-
-
+{----mostrarCantidades----
+Se encarga de preparar los archivos para mostrar las cantidades de habitaciones creadas-}
 mostrarCantidades::IO()
-mostrarCantidades = do
-    listaCodigosTipoHabitacion <- leerArchivo "codigosTiposHabitaciones.txt"
-    listaCantidadTiposHabitacion<- leerArchivo "cantidadPorTiposHabitaciones.txt"
-    mostrarCantidadesAux listaCantidadTiposHabitacion listaCodigosTipoHabitacion
+mostrarCantidades = 
+    do
+        listaCodigosTipoHabitacion <- leerArchivo "codigosTiposHabitaciones.txt"
+        listaCantidadTiposHabitacion<- leerArchivo "cantidadPorTiposHabitaciones.txt"
+        mostrarCantidadesAux listaCantidadTiposHabitacion listaCodigosTipoHabitacion
 
-
+{----mostrarCantidadesAux----
+Muestra el nombre y el tipo de habitacion para luego mostrar la cantidades de ese tipo de habitacion-}
 mostrarCantidadesAux::[String]->[String]->IO()
 mostrarCantidadesAux [] [] = menuAdministrativo
-mostrarCantidadesAux listaCodigosTipoHabitacion listaCantidadTiposHabitacion = do
-    let nombre = head listaCodigosTipoHabitacion
-    let tl2 = tail listaCodigosTipoHabitacion 
-    let tl3 = tail tl2
-    let cantidad = read(head tl2)::Int
-    let mensaje = "El tipo de habitacion "++nombre++" tiene las siguientes habitaciones, se muestran sus identificadores: \n"
-    putStrLn mensaje
-    mostrarSig tl3 cantidad 0 listaCantidadTiposHabitacion
+mostrarCantidadesAux listaCodigosTipoHabitacion listaCantidadTiposHabitacion = 
+    do
+        let nombre = head listaCodigosTipoHabitacion
+        let tl2 = tail listaCodigosTipoHabitacion 
+        let tl3 = tail tl2
+        let cantidad = read(head tl2)::Int
+        let mensaje = "El tipo de habitacion "++nombre++" tiene las siguientes habitaciones, se muestran sus identificadores: \n"
+        putStrLn mensaje
+        mostrarSig tl3 cantidad 0 listaCantidadTiposHabitacion
 
 
-
+{----mostrarSig----
+muestra la cantidad de habitaciones por tipo y continua la funcion recursiva 
+de mostrar las cantidades de habitaciones por tipo-}
 mostrarSig::[String]->Int->Int->[String]->IO()
-mostrarSig lista cant cont listaCantidadTiposHabitacion = do
-    let hd = head listaCantidadTiposHabitacion
-    let tl = tail listaCantidadTiposHabitacion
-    let cont2 = cont+1
-    putStrLn (hd++"\n")
-    if cont == cant-1 then 
-        mostrarCantidadesAux lista tl
-    else
-        mostrarSig lista cant cont2 tl
+mostrarSig lista cant cont listaCantidadTiposHabitacion = 
+    do
+        let hd = head listaCantidadTiposHabitacion
+        let tl = tail listaCantidadTiposHabitacion
+        let cont2 = cont+1
+        putStrLn (hd++"\n")
+        if cont == cant-1 then 
+            mostrarCantidadesAux lista tl
+        else
+            mostrarSig lista cant cont2 tl
 
 {-----------------------------------------------------------CARGAR TARIFAS---------------------------------------------------------------}
 
+{----cargarTarifas-----
+Se encarga de preparar los archivos necesarios para esta funcionalidad para
+realizar la persistencia de datos-}
 cargarTarifas::IO()
-cargarTarifas = do
-    resetearArchivo "Tarifas.txt" ""
-    list <- leerArchivo "habitacionesCargadas.txt"
-    let listaDeHabitaciones = crearListaHabitacionesAux list []
-    cargarTarifasAux listaDeHabitaciones
+cargarTarifas = 
+    do
+        resetearArchivo "Tarifas.txt" ""
+        list <- leerArchivo "habitacionesCargadas.txt"
+        let listaDeHabitaciones = crearListaHabitacionesAux list []
+        cargarTarifasAux listaDeHabitaciones
        
+{----cargarTarifasAux----
+Le solicita al usario la tarifa o precio de cada tipo de habitacion para
+luego guardar cada tarifa en el archivo de persistencia de datos-}
 cargarTarifasAux ::[String]->IO()
 cargarTarifasAux [] = menuAdministrativo 
-cargarTarifasAux lista = do
-    let tipo = head lista
-    let tlLista = tail lista
-    let interaccion = ("\nIngrese un precio para la habitacion de tipo " ++ tipo ++ " : ")
-    putStrLn interaccion
-    precio <- getLine
-    appendFile "Tarifas.txt" (tipo ++ "\n" ++ precio ++ "\n")
-    cargarTarifasAux tlLista     
+cargarTarifasAux lista = 
+    do
+        let tipo = head lista
+        let tlLista = tail lista
+        let interaccion = ("\nIngrese un precio para la habitacion de tipo " ++ tipo ++ " : ")
+        putStrLn interaccion
+        precio <- getLine
+        appendFile "Tarifas.txt" (tipo ++ "\n" ++ precio ++ "\n")
+        cargarTarifasAux tlLista     
 
+{----crearListaHabitacionesAux----
+crea una lista con los nombres de los tipos de habitaciones cargadas-}
 crearListaHabitacionesAux:: [String]->[String]->[String]
 crearListaHabitacionesAux [] listaDeHabitaciones = listaDeHabitaciones
-crearListaHabitacionesAux lista listaDeHabitaciones = do
-    let primerElemento = head lista
-    let tl = tail lista
-    let tl1 = tail tl
-    let listaSigHabitacion = tail tl1
-    let listaDeHabitaciones2 = listaDeHabitaciones++[primerElemento] 
-    crearListaHabitacionesAux listaSigHabitacion listaDeHabitaciones2
-
+crearListaHabitacionesAux lista listaDeHabitaciones = 
+    do
+        let nombre = head lista
+        let valor_1 = tail lista
+        let valor2 = tail valor_1
+        let listaSigHabitacion = tail valor2
+        let listaDeHabitaciones2 = listaDeHabitaciones++[nombre] 
+        crearListaHabitacionesAux listaSigHabitacion listaDeHabitaciones2
