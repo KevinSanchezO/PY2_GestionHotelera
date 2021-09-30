@@ -33,8 +33,8 @@ menuAdministrativo=
             "2"->cargarTipoHabitacion
             "3"->validarUnaVezCantidadTipo
             "4"->cargarTarifas
-            {-"5"->consultarReservacion
-            "6"->consultaFacturas
+            "5"->consultarReservaciones
+            {-"6"->consultaFacturas
             "7"->estadisticasOcupacion-}
             "0"->menuPrincipal
             _ -> errorDigito
@@ -761,3 +761,42 @@ cancelacion cancelado idReserva nombreReservador fechaDeReserva fechaEntrada fec
         appendFile "reservaciones.txt" (tipoHabitacion++"\n")
         appendFile "reservaciones.txt" (precio++"\n")
         cancelarReservacionAux corte10 cancelado
+
+
+{-------consultaReservaciones-------
+-Funcion principal que se llama del menu administrativo para consultar todas las reservaciones del sistema-}
+consultarReservaciones:: IO()
+consultarReservaciones = do
+    listaReservacion <- leerArchivo "reservaciones.txt"
+    consultarReservacionesAux listaReservacion
+{----consultarReservacionesAux----
+Funcion auxiliar de consultaReservaciones que se encarga de mostrar el identificador, nombre de la persona que reservo, fecha de reserva, fecha de entrada, 
+fecha de salida, cantidad de ninos, estado y total-}
+consultarReservacionesAux:: [String]->IO()
+consultarReservacionesAux [] = menuAdministrativo
+consultarReservacionesAux listaReservaciones = do
+    let identificador = head listaReservaciones
+    let corte = tail listaReservaciones
+    let nombreReserva = head corte
+    let corte2 = tail corte
+    let fechaReserva = head corte2
+    let corte3 = tail corte2
+    let fechaIngreso = head corte3
+    let corte4 = tail corte3
+    let fechaSalida = head corte4
+    let corte5 = tail corte4
+    let cantidadDeAdultos = head corte5
+    let corte6 = tail corte5
+    let cantidadDeNinos = head corte6
+    let corte7 = tail corte6
+    let estado = head corte7
+    let corte8 = tail corte7
+    let nombreTipoHabitacion = head corte8
+    let corte9 = tail corte8
+    let total= head corte9
+    let corte10= tail corte9
+    let mensaje = "\nIdentificador: " ++ identificador ++ "\nNombre de la persona que reservo: " ++ nombreReserva ++ "\nFecha de reserva: " ++ fechaReserva ++ "\nFecha de entrada: " ++ fechaIngreso ++ "\nFecha de salida: " ++ fechaSalida ++ "\nCantidad de adultos: " ++ cantidadDeAdultos ++ "\nCantidad de ninos: " ++ cantidadDeNinos ++ "\nEstado: " ++ estado ++ "\nNombre de habitacion: "++nombreTipoHabitacion++"\nTotal: "++total
+    putStrLn mensaje
+    consultarReservacionesAux corte10
+
+
