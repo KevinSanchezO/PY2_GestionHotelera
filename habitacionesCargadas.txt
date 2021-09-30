@@ -1,9 +1,0 @@
-Habitacion familiar
-habitacion estandar con 4 camas y una ducha
-4
-Habitacion individual
-habitacion individual con una cama y una ducha
-1
-Habitacion deluxe
-habitacion de clase alta
-6

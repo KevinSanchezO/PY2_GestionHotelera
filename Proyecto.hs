@@ -49,8 +49,8 @@ menuOpcionesGenerales=
         d<-getLine
         case d of
             "1"->reservacion
-            {-"2"->cancelarReservacion
-            "3"->facturarReservacion-}
+            "2"->cancelarReservacion
+            {-"3"->facturarReservacion-}
             "0"->menuPrincipal
             _ ->errorDigito
 
@@ -385,38 +385,38 @@ de niños y el nombre de la persona que reserva-}
 reservacion::IO()
 reservacion = 
     do
-        putStrLn "Digite el dia de ingreso"
-        dia <- getLine
 
-        putStrLn "Digite el mes de ingreso"
-        mes <- getLine
-    
-        putStrLn "Digite el anio de ingreso"
-        anio <- getLine
-    
-        let fechaEntrada = [dia]++[mes]++[anio]
-        let fechaI = dia++"/"++mes++"/"++anio
-    
-        putStrLn "Digite el dia de salida"
-        diaS <- getLine
-    
-        putStrLn "Digite el mes de salida"
-        mesS <- getLine
-    
-        putStrLn "Digite el anio de salida"
-        anioS <- getLine
-    
-        let fechaSalida = [diaS]++[mesS]++[anioS]
-        let fechaS = diaS++"/"++mesS++"/"++anioS
-    
+        putStrLn "Digite la fecha de ingreso"
+        fechaI <- getLine
+
+        putStrLn "Digite la fecha de salida"
+        fechaS <- getLine
+
         putStrLn "Digite cantidad de adultos"
         adultos <- getLine
-    
+
         putStrLn "Digite la cantidad de niños"
         ninos <- getLine
-    
+
         putStrLn "Digite el nombre de la persona que reserva"
         nombre <- getLine
+
+        let fechaEntrada = split '/' fechaI
+
+        let dia= head fechaEntrada
+        let corte= tail fechaEntrada
+        let mes= head corte
+        let corte2=tail corte
+        let anio= head corte2
+
+        let fechaSalida = split '/' fechaS
+
+        let diaS= head fechaSalida
+        let corte3= tail fechaSalida
+        let mesS= head corte3
+        let corte4=tail corte3
+        let anioS= head corte4
+
 
         let anioIngreso = read anio::Int
         let anioSalida = read anioS::Int
@@ -424,16 +424,16 @@ reservacion =
         let mesSalida = read mesS ::Int
         let diaIngreso = read dia ::Int
         let diaSalida = read diaS ::Int
-    
-        let res = [fechaI]++[fechaS]++[adultos]++[ninos]++[nombre]
+
+        listaHabitaciones <- leerArchivo "habitacionesCargadas.txt" 
 
         if validarFechaDigitos diaIngreso mesIngreso anioIngreso diaSalida mesSalida anioSalida then
             if  validarFecha diaIngreso mesIngreso anioIngreso diaSalida mesSalida anioSalida then 
-                reservarHabitacion res fechaEntrada fechaSalida
+                reservarHabitacion fechaI fechaS adultos ninos nombre listaHabitaciones 
             else 
                 fechaInvalida
-        else    
-            fechaInvalida 
+        else
+            fechaInvalida
 
 
 {----validarFecha----
@@ -479,18 +479,108 @@ validarFechaDigitos diaEntrada mesEntrada anioEntrada diaSalida mesSalida anioSa
 
 
 {----reservacionHabitacion----
-Obtiene los datos de las habitaciones y sus cantidaddes maximas de huespedes y prepara los
-archivos necesarios para guardar los datos-}
-reservarHabitacion::[String]->[String]->[String]->IO()
-reservarHabitacion res fechaIngreso fechaSalida = 
+Obtiene el tipo de habitacion que el usuario desea para la reservacion-}
+reservarHabitacion::String->String->String->String->String->[String]->IO()
+reservarHabitacion fechaI fechaS adultos ninos nombre listaHabitaciones = 
     do
-        listaHabitaciones <- leerArchivo "habitacionesCargadas.txt"
-        listaCantidadTiposHabitaciones <- leerArchivo "cantidadPorTiposHabitaciones.txt" 
-        listareservasXfecha <- leerArchivo "reservacionesXFecha.txt" 
-    
-        let listaHabitacionesCantMaxHuespedes = listaHabitacionesCantMax listaHabitaciones []
+        putStrLn "Digite el tipo de habitacion que desea reservar: "
+        tipoHabitacion <-getLine
+        reservarHabitacionAux fechaI fechaS adultos ninos nombre listaHabitaciones tipoHabitacion
+        
+{-----reservarHabitacionAux-----
+Valida la existencia del tipo de habitacion seleccionadad y la capacidad de huespedes con el tipo de habitacion-}
+reservarHabitacionAux::String->String->String->String->String->[String]->String->IO()
+reservarHabitacionAux fechaI fechaS adultos ninos nombre listaHabitaciones tipoHabitacion =
+    do
+        let habitacionExistencia = existeHabitacionCargadaHuespedes listaHabitaciones tipoHabitacion
+        let adultosINT = read adultos::Int 
+        let ninosINT = read ninos::Int
+        let totalHuespedes = adultosINT + ninosINT
+        let habitacionExistenciaINT = read habitacionExistencia::Int
 
-        reservarHabitacionAux listaHabitacionesCantMaxHuespedes res listaCantidadTiposHabitaciones 0 fechaIngreso fechaSalida listareservasXfecha []
+        if (habitacionExistenciaINT == 0) then
+            errorHabitaciones
+        else
+            if (totalHuespedes <= habitacionExistenciaINT) then
+                guardarReservacion fechaI fechaS adultos ninos nombre tipoHabitacion habitacionExistencia
+            else
+                errorSumaCantidad
+
+{-----guardarReservacion------
+Prepara y guarda los datos de la reservacion en el documento que permite la persistencia de datos-}
+guardarReservacion::String->String->String->String->String->String->String->IO()
+guardarReservacion fechaI fechaS adultos ninos nombre tipoHabitacion habitacionExistencia = 
+    do
+        listaCodigosReservacion <- leerArchivo "codigoReservacion.txt"
+
+        cs <- readFile "infoHoteles.txt"
+        let listaHotelesMostrar = split ',' cs
+        
+        listaTarifas <- leerArchivo "Tarifas.txt"
+        let strIdentificador = head listaCodigosReservacion
+        let identificadorDeReserva = crearIdentificadorReserva strIdentificador
+        let intIdentificador = read strIdentificador::Int
+        let intIdentificadorNuevo = intIdentificador + 1
+        
+        let strIdentificadorNuevo = show intIdentificadorNuevo
+        fechaActual <- fecha
+
+        resetearArchivo "codigoReservacion.txt" strIdentificadorNuevo
+        putStrLn "\n__________________________________COMPROBANTE___________________________________\n"
+
+        let hotel = infoHotel listaHotelesMostrar
+        putStrLn hotel
+
+        let precioTotal = obtenerTarifaTipoHabitacion listaTarifas tipoHabitacion
+
+        putStrLn ("\nId Reservacion: " ++ identificadorDeReserva)
+        putStrLn ("Nombre del reservante: " ++ nombre)
+        putStrLn ("Fecha de reservacion: " ++ fechaActual)
+        putStrLn ("Fecha de ingreso: " ++ fechaI)
+        putStrLn ("Fecha de salida: " ++ fechaS)
+        putStrLn ("Cantidad de adultos: " ++ adultos)
+        putStrLn ("Cantidad de ninos: " ++ ninos)
+        putStrLn ("Precio total: " ++ precioTotal)
+        appendFile "reservaciones.txt" (identificadorDeReserva++ "\n")
+        appendFile "reservaciones.txt" (nombre++ "\n")
+        appendFile "reservaciones.txt" (fechaActual++ "\n")
+        appendFile "reservaciones.txt" (fechaI++ "\n")
+        appendFile "reservaciones.txt" (fechaS++ "\n")
+        appendFile "reservaciones.txt" (adultos++ "\n")
+        appendFile "reservaciones.txt" (ninos ++ "\n")
+        appendFile "reservaciones.txt" ("Activa" ++ "\n")
+        appendFile "reservaciones.txt" (tipoHabitacion ++ "\n")
+        appendFile "reservaciones.txt" (precioTotal ++ "\n")
+        terminarReservacion
+
+
+obtenerTarifaTipoHabitacion::[String]->String->String
+obtenerTarifaTipoHabitacion listaTarifas nombre =
+    do
+        let nombreTipo = head listaTarifas
+        let corte = tail listaTarifas
+        let tarifa = head corte
+        let resto = tail corte
+
+        if (nombre == nombreTipo) then 
+            tarifa
+        else 
+            obtenerTarifaTipoHabitacion resto nombre
+
+
+existeHabitacionCargadaHuespedes::[String]->String->String
+existeHabitacionCargadaHuespedes [] tipoHabitacion = "0" 
+existeHabitacionCargadaHuespedes listaHabitaciones tipoHabitacion =
+    do 
+        let nombreHabitacion = head listaHabitaciones
+        let corte = tail (tail listaHabitaciones)
+        let maximoHuespedes = head corte
+        let resto = tail corte
+        
+        if (tipoHabitacion == nombreHabitacion) then
+            maximoHuespedes
+        else 
+            existeHabitacionCargadaHuespedes resto tipoHabitacion
 
 
 {----listaHabitacionesCantMax-----
@@ -508,47 +598,10 @@ listaHabitacionesCantMax lista res =
         listaHabitacionesCantMax cortePosLista2 res2
 
 
-{----reservarHabitacionAux----}
-reservarHabitacionAux::[String]->[String]->[String]->Int->[String]->[String]->[String]->[String]->IO()
-reservarHabitacionAux [] res listaCantidadTiposHabitaciones cantHuespedes fechaIngreso fechaSalida listareservasXfecha habitacionesReservadas = validarHuespedes cantHuespedes res fechaIngreso fechaSalida listareservasXfecha habitacionesReservadas
-reservarHabitacionAux listaHabitacionesCantMaxHuespedes res listaCantidadTiposHabitaciones cantHuespedes fechaIngreso fechaSalida listareservasXfecha habitacionesReservadas = do
-    let nombreHabitacion = head listaHabitacionesCantMaxHuespedes 
-    let tl = tail listaHabitacionesCantMaxHuespedes 
-    let listaCantTipoSinNombre = tail listaCantidadTiposHabitaciones 
-    let maximoHabitacion = head listaCantTipoSinNombre 
-    let sigHabitacion = tail listaCantTipoSinNombre 
-    let totalHabitaciones = read maximoHabitacion::Int 
-    let cantMaxHuespedes = head tl 
-    let cantidadHuespedes = read cantMaxHuespedes::Int 
-    let tl1 = tail tl  
-    let cantReservasFecha = listaIntervaloFecha nombreHabitacion fechaIngreso fechaSalida listareservasXfecha 
-    let habitacionesDisponibes = totalHabitaciones - cantReservasFecha 
-    putStrLn ("Numero de Habitaciones de tipo" ++ nombreHabitacion ++ " a reservar: ")
-    cantidaTipoHabitacion <- getLine
-    let cantTipoHabitacion = read cantidaTipoHabitacion::Int 
-    putStrLn ("Adultos por habitación de tipo" ++ nombreHabitacion ++ ": ")
-    cantidadAdultosXHabitacion <- getLine
-    let cantAdultosXHabitacion = read cantidadAdultosXHabitacion::Int 
-    putStrLn ("Niños por habitación de tipo" ++ nombreHabitacion ++ ": ")
-    cantidadNinosXHabitacion <- getLine
-    let listaReservaciones = habitacionesReservadas++[nombreHabitacion]++[cantidaTipoHabitacion]++[cantidadAdultosXHabitacion]++[cantidadNinosXHabitacion] 
-    let cantNinosXHabitacion = read cantidadNinosXHabitacion::Int 
-    let suma = (cantAdultosXHabitacion + cantNinosXHabitacion)*cantTipoHabitacion 
-    let cantHuespedesTotal = cantHuespedes+suma  
-    let listaReserva = res++[nombreHabitacion]++[cantidaTipoHabitacion]++[cantidadAdultosXHabitacion]++[cantidadNinosXHabitacion]  
-    if suma <= cantidadHuespedes*cantTipoHabitacion then
-        if habitacionesDisponibes >= cantTipoHabitacion then
-            reservarHabitacionAux tl1 listaReserva sigHabitacion cantHuespedesTotal fechaIngreso fechaSalida listareservasXfecha listaReservaciones 
-        else
-            errorHabitaciones
-    else 
-        errorSumaCantidad  
-
-
 errorHabitaciones::IO()
 errorHabitaciones = 
     do
-        putStrLn "\n HABITACIONES INSUFICIENTES PARA ESTA FECHA. \n"
+        putStrLn "\n EL TIPO DE HABITACION SELECCIONADA NO EXISTE. \n"
         menuOpcionesGenerales
 
 
@@ -556,190 +609,8 @@ errorHabitaciones =
 errorSumaCantidad::IO()
 errorSumaCantidad = 
     do
-        putStrLn "\n HUESPEDES SUPERAN EL LIMITE DE LAS HABITACIONES \n"
+        putStrLn "\n HUESPEDES SUPERAN EL LIMITE DEL TIPO DE HABITACION \n"
         menuOpcionesGenerales
-
-
-validarHuespedes::Int->[String]->[String]->[String]->[String]->[String]->IO()
-validarHuespedes cantidadHuespedes res fechaIngreso fechaSalida listaDeReservasXFecha habitacionesReservadas = 
-    do
-        let listaSinFechas = cortePosLista res 1 0
-        let cantAdultos = head listaSinFechas
-        let intCantidadAdultos = read cantAdultos::Int
-        let tl = tail listaSinFechas
-        let cantNinos = head tl
-        let intCantidadNinos = read cantNinos::Int 
-        let sumaCantNinosCantAdultos = intCantidadAdultos+intCantidadNinos
-        putStrLn "\n 1 \n"
-        if sumaCantNinosCantAdultos == cantidadHuespedes then
-            muestraReservacion res fechaIngreso fechaSalida listaDeReservasXFecha habitacionesReservadas
-        else
-            errorCantHuespedes
-
-
-listaIntervaloFecha::String->[String]->[String]->[String]->Int
-listaIntervaloFecha nombreHabitacion fechaIngreso fechaSalida listaDeFechas = 
-    do
-        let diaInicio = head fechaIngreso
-        let diaFin = head fechaSalida
-        let diaInicial = read diaInicio::Int
-        let diaFinal = read diaFin::Int
-        let fechaIngreso2 = tail fechaIngreso
-        let mesInicio = head fechaIngreso2
-        let mesInicial = read mesInicio::Int
-        listaIntervaloFechaAux nombreHabitacion listaDeFechas 0 diaInicial diaFinal mesInicial 
-
-
-listaIntervaloFechaAux::String->[String]->Int->Int->Int->Int->Int
-listaIntervaloFechaAux nombreHabitacion [] res diaInicial diaFinal mesInicial= res
-listaIntervaloFechaAux nombreHabitacion lista res diaInicial diaFinal mesInicial = 
-    do
-        let hd = head lista
-        let dia = read hd::Int
-        let tl = tail lista
-        let hd2 = head tl
-        let mes = read hd2::Int 
-        let listaHabitaciones = cortePosLista lista 5 0
-        let sig = cortePosLista lista 7 0
-        let habitacion = head listaHabitaciones
-        let cant0 = tail listaHabitaciones
-        let cant1 = head cant0
-        let cant2 = read cant1::Int
-        let res2 = res+cant2
-        if dia >= diaInicial && dia <= diaFinal && nombreHabitacion == habitacion && mes == mesInicial then
-            listaIntervaloFechaAux nombreHabitacion sig res2 diaInicial diaFinal mesInicial 
-        else
-            listaIntervaloFechaAux nombreHabitacion sig res diaInicial diaFinal mesInicial 
-
-
-
-cortePosLista:: [String]->Int->Int->[String]
-cortePosLista [] cantidad contador = []
-cortePosLista lista cantidad contador = 
-    do
-        let tl = tail lista
-        let contador2 = contador+1
-        if cantidad == contador then
-            tl
-        else
-            cortePosLista tl cantidad contador2
-
-
-
-muestraReservacion::[String]->[String]->[String]->[String]->[String]->IO()
-muestraReservacion res fechaIngreso1 fechaSalida1 listaReservasXFecha listaReservaciones = 
-    do
-        listaCodigosReservacion <- leerArchivo "codigoReservacion.txt"
-
-        cs <- readFile "infoHoteles.txt"
-        let listaHotelesMostrar = split ',' cs
-        
-        listaTarifas <- leerArchivo "Tarifas.txt"
-            
-        let precioTotal = calcularPrecioDeHabitacion listaReservaciones listaTarifas 0
-        let precioTotal_str = show precioTotal
-
-        
-        let strIdentificador = head listaCodigosReservacion
-        let identificadorDeReserva = crearIdentificadorReserva strIdentificador
-        let intIdentificador = read strIdentificador::Int
-        let intIdentificadorNuevo = intIdentificador + 1
-        let strIdentificadorNuevo = show intIdentificadorNuevo
-        let listaNombre = cortePosLista res 3 0 
-        let nombrePersona = head listaNombre
-        let fechaIngreso = head res
-        let listaSinFechaInicial = tail res
-        let fechaSalida = head listaSinFechaInicial
-        let listaSinFechas = tail listaSinFechaInicial
-        let cantidadAdultos = head listaSinFechas
-        let listasinFechasCAdultos = tail listaSinFechas
-        let cantidadNinos = head listasinFechasCAdultos
-        fechaActual <- fecha
-        resetearArchivo "codigoReservacion.txt" strIdentificadorNuevo
-        putStrLn "\n\tCOMPROBANTE\n"
-
-        let hotel = infoHotel listaHotelesMostrar
-        putStrLn hotel
-        
-        putStrLn ("\nId Reservacion: " ++ identificadorDeReserva ++ "\n")
-        putStrLn ("Nombre del reservante: " ++ nombrePersona ++ "\n")
-        putStrLn ("Fecha de reservacion: " ++ fechaActual ++" \n")
-        putStrLn ("Fecha de ingreso: " ++ fechaIngreso ++ " \n")
-        putStrLn ("Fecha de salida: " ++ fechaSalida ++ " \n")
-        putStrLn ("Cantidad de adultos: " ++ cantidadAdultos ++ " \n")
-        putStrLn ("Cantidad de ninos: " ++ cantidadNinos ++ " \n")
-        putStrLn ("Precio total: " ++ precioTotal_str ++"\n")
-        appendFile "reservaciones.txt" (identificadorDeReserva++ "\n")
-        appendFile "reservaciones.txt" (nombrePersona++ "\n")
-        appendFile "reservaciones.txt" (fechaActual++ "\n")
-        appendFile "reservaciones.txt" (fechaIngreso++ "\n")
-        appendFile "reservaciones.txt" (fechaSalida++ "\n")
-        appendFile "reservaciones.txt" (cantidadAdultos++ "\n")
-        appendFile "reservaciones.txt" (cantidadNinos ++ "\n")
-        appendFile "reservaciones.txt" ("Activa" ++ "\n")
-        appendFile "reservaciones.txt" (precioTotal_str ++ "\n")
-        printearHabitacionesReservadas res fechaIngreso1 fechaSalida1 listaReservasXFecha listaReservaciones identificadorDeReserva
-
-
-calcularPrecioDeHabitacion::[String]->[String]->Int->Int
-calcularPrecioDeHabitacion [] listaTarifas total = total
-calcularPrecioDeHabitacion listaHabitacionesReservadas listaTarifas total = 
-    do
-        let habitacionReservada = head listaHabitacionesReservadas
-        let habitacionTarifa = head listaTarifas
-        let cantidadHabitacionesReservadas = read (head(tail listaHabitacionesReservadas))::Int
-        let cantidadTarifa = read (head(tail listaTarifas))::Int
-        let totalDefinitivo = total+(cantidadHabitacionesReservadas * cantidadTarifa)
-        if habitacionReservada == habitacionTarifa then
-            calcularPrecioDeHabitacion (cortePosLista listaHabitacionesReservadas 3 0) (cortePosLista listaTarifas 1 0) totalDefinitivo
-        else
-            calcularPrecioDeHabitacion listaHabitacionesReservadas (cortePosLista listaTarifas 1 0) total
-
-
-printearHabitacionesReservadas::[String]->[String]->[String]->[String]->[String]->String->IO()
-printearHabitacionesReservadas  res fechaIngreso fechaSalida listaReservasXFecha [] id = terminarReservacion
-printearHabitacionesReservadas  res fechaIngreso fechaSalida listaReservasXFecha listaReservaciones id= 
-    do
-        let nombre = head listaReservaciones--
-        let listaCant = tail listaReservaciones
-        let cant = head listaCant --
-        let cantINT = read cant::Int --
-        let listaAdultos = tail listaCant
-        let cantidadAdultos = head listaAdultos
-        let listaNinos = tail listaAdultos
-        let cantidadNinos = head listaNinos
-        let sigLista = cortePosLista listaReservaciones 3 0 
-        if cantINT == 0 then
-            printearHabitacionesReservadas res fechaIngreso fechaSalida listaReservasXFecha sigLista id
-        else
-            printearHabitacionesReservadasAux res fechaIngreso fechaSalida listaReservasXFecha sigLista nombre cantINT cantidadAdultos cantidadNinos id
-
-
-printearHabitacionesReservadasAux::[String]->[String]->[String]->[String]->[String]->String->Int->String->String->String->IO()
-printearHabitacionesReservadasAux res fechaIngreso fechaSalida listaReservasXFecha listaReservaciones nombre cantidad adultos ninos id= 
-    do
-        let cantidadHabitacionesReservadasFecha = listaIntervaloFecha nombre fechaIngreso fechaSalida listaReservasXFecha 
-        appendFile "reservacionesXFecha.txt" (head fechaIngreso ++"\n" ) 
-        appendFile "reservacionesXFecha.txt" (head (tail fechaIngreso)++"\n") 
-        appendFile "reservacionesXFecha.txt" (head (tail (tail fechaIngreso))++"\n") 
-        appendFile "reservacionesXFecha.txt" (head fechaSalida ++"\n")  
-        appendFile "reservacionesXFecha.txt" (head (tail fechaSalida)++"\n") 
-        appendFile "reservacionesXFecha.txt" (head (tail (tail fechaSalida))++"\n") 
-        appendFile "reservacionesXFecha.txt" (nombre++"\n") 
-        appendFile "reservacionesXFecha.txt" (show cantidad++"\n") 
-        printearHabitacionesReservadasAux2 res fechaIngreso fechaSalida listaReservasXFecha listaReservaciones nombre cantidad adultos ninos cantidadHabitacionesReservadasFecha id
-
-
-printearHabitacionesReservadasAux2::[String]->[String]->[String]->[String]->[String]->String->Int->String->String->Int->String->IO()
-printearHabitacionesReservadasAux2 resultado fechaIngreso fechaSalida listaReservasXFecha listaReservaciones nombreTipoHabitacion 0 adultos ninos num identificador = printearHabitacionesReservadas resultado fechaIngreso fechaSalida listaReservasXFecha listaReservaciones identificador
-printearHabitacionesReservadasAux2 resultado fechaIngreso fechaSalida listaReservasXFecha listaReservaciones nombreTipoHabitacion cantidad adultos ninos num identificador = 
-    do
-        let identificadorHabitacion = nombreTipoHabitacion++show num
-        let habitacion = "Identificador de habitacion: " ++ identificadorHabitacion ++" tipo de habitacion: "++nombreTipoHabitacion++" "++"Cantidad de adultos: " ++ adultos ++" "++"Cantidad de ninos: " ++ ninos
-        putStrLn habitacion
-        appendFile "habitacionesReservadas.txt" (identificador++"\n")
-        appendFile "habitacionesReservadas.txt" (habitacion++ "\n")
-        printearHabitacionesReservadasAux2 resultado fechaIngreso fechaSalida listaReservasXFecha listaReservaciones nombreTipoHabitacion (cantidad-1) adultos ninos (num+1) identificador
 
 
 infoHotel::[String]-> String
@@ -778,7 +649,8 @@ infoHotel datosArchivo =
 
         str7
 
-
+{-----fecha-----
+Obtiene la fecha y hora actual del sistema-}
 fecha :: IO String
 fecha = 
     do
@@ -794,6 +666,7 @@ fecha =
         pSegundo<-intToString segundo
         let fechaT = pAño++"/"++pMes++"/"++pDia++" "++pHora++":"++pMinuto++":"++pSegundo
         return fechaT
+
 
 crearIdentificadorReserva::String->String
 crearIdentificadorReserva strID = 
@@ -819,5 +692,72 @@ terminarReservacion =
         putStrLn "\n\t\tSE REALIZO LA RESERVACION CON EXITO\n"
         menuOpcionesGenerales
 
+{-------------------------------Cancelar Reservacion---------------------------------}
 
+{----cancelarReservacion-----
+Solicita el identificador de la reservacion que desea cancelar-}
+cancelarReservacion::IO()
+cancelarReservacion =
+    do
+        listaReservaciones <-leerArchivo "reservaciones.txt"
+        resetearArchivo "reservaciones.txt" ""
+        putStrLn "Digite el identificador de la reservacion que desea cancelar: "
+        cancelado <- getLine
+        cancelarReservacionAux listaReservaciones cancelado
 
+{-----cancelarReservacionAux-------
+Recorre una lista generada con el archivo donde se almacenan las reservaciones
+cuando encuentra la reservacion generada cambia su estado a Cancelada
+En caso de no existir lo notifica y devuelve al menu general-}
+cancelarReservacionAux:: [String]->String->IO()
+cancelarReservacionAux [] cancelado = menuOpcionesGenerales
+cancelarReservacionAux listaReservaciones cancelado = 
+    do
+        let idReserva = head listaReservaciones
+        let corte = tail listaReservaciones
+        let nombreReservador = head corte
+        let corte2 = tail corte
+        let fechaDeReserva = head corte2
+        let corte3 = tail corte2
+        let fechaEntrada = head corte3
+        let corte4 = tail corte3
+        let fechaSalida = head corte4
+        let corte5 = tail corte4
+        let cantAdultos = head corte5
+        let corte6 = tail corte5
+        let cantNinos = head corte6
+        let corte7 = tail corte6
+        let estado = head corte7
+        let corte8 = tail corte7
+        let tipoHabitacion = head corte8
+        let corte9 = tail corte8
+        let precio = head corte9
+        let corte10 = tail corte9
+        if (idReserva == cancelado) then
+            if (estado == "Activa") then
+                cancelacion cancelado idReserva nombreReservador fechaDeReserva fechaEntrada fechaSalida cantAdultos cantNinos "Cancelada" tipoHabitacion precio corte10          
+            else
+                cancelacionAlready 
+        else
+            cancelacion cancelado idReserva nombreReservador fechaDeReserva fechaEntrada fechaSalida cantAdultos cantNinos estado tipoHabitacion precio corte10
+
+cancelacionAlready::IO()
+cancelacionAlready =
+    do
+        putStrLn "LA RESERVACION YA ESTA CANCELADA"
+        menuOpcionesGenerales
+
+cancelacion::String->String->String->String->String->String->String->String->String->String->String->[String]->IO()
+cancelacion cancelado idReserva nombreReservador fechaDeReserva fechaEntrada fechaSalida cantAdultos cantNinos estado tipoHabitacion precio corte10= 
+    do
+        appendFile "reservaciones.txt" (idReserva++"\n") 
+        appendFile "reservaciones.txt" (nombreReservador++"\n")
+        appendFile "reservaciones.txt" (fechaDeReserva++"\n")
+        appendFile "reservaciones.txt" (fechaEntrada++"\n")
+        appendFile "reservaciones.txt" (fechaSalida++"\n")
+        appendFile "reservaciones.txt" (cantAdultos++"\n")
+        appendFile "reservaciones.txt" (cantNinos++"\n")
+        appendFile "reservaciones.txt" (estado++"\n")
+        appendFile "reservaciones.txt" (tipoHabitacion++"\n")
+        appendFile "reservaciones.txt" (precio++"\n")
+        cancelarReservacionAux corte10 cancelado

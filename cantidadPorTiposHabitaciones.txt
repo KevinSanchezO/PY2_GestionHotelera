@@ -1,6 +1,0 @@
-Habitacion familiar
-5
-Habitacion individual
-5
-Habitacion deluxe
-5
