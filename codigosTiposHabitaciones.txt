@@ -1,0 +1,15 @@
+Habitacion familiar0
+Habitacion familiar1
+Habitacion familiar2
+Habitacion familiar3
+Habitacion familiar4
+Habitacion individual0
+Habitacion individual1
+Habitacion individual2
+Habitacion individual3
+Habitacion individual4
+Habitacion deluxe0
+Habitacion deluxe1
+Habitacion deluxe2
+Habitacion deluxe3
+Habitacion deluxe4
